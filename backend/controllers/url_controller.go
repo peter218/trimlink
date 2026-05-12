@@ -123,13 +123,13 @@ func GetStats(c *gin.Context) {
 
 	// Aggregate click logs by day for the chart
 	type DailyStats struct {
-		Date  string `json:"date"`
-		Count int64  `json:"count"`
+		Date   string `json:"date"`
+		Clicks int64  `json:"clicks"`
 	}
 
 	var stats []DailyStats
 	database.DB.Model(&models.ClickLog{}).
-		Select("DATE(created_at) as date, count(id) as count").
+		Select("DATE(created_at) as date, count(id) as clicks").
 		Where("short_code = ?", shortCode).
 		Group("DATE(created_at)").
 		Order("date ASC").

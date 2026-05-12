@@ -1,9 +1,47 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import axios from 'axios';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { ArrowLeft, Activity, MousePointerClick, Calendar, ExternalLink, Info } from 'lucide-react';
 import { BACKEND_URL } from '../config';
+
+function toDateKey(value) {
+  if (!value) return '';
+
+  const raw = String(value);
+  const isoDate = raw.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
+  if (isoDate) return isoDate;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateLabel(dateKey) {
+  if (!dateKey) return '';
+
+  return new Date(`${dateKey}T00:00:00`).toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function DailyClicksTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null;
+
+  const clicks = Number(payload[0]?.value ?? 0);
+
+  return (
+    <div className="chart-tooltip">
+      <span>{label}</span>
+      <strong>{clicks} {clicks === 1 ? 'click' : 'clicks'}</strong>
+    </div>
+  );
+}
 
 export default function Analytics() {
   const { code } = useParams();
@@ -16,7 +54,7 @@ export default function Analytics() {
       try {
         const response = await axios.get(`${BACKEND_URL}/api/stats/${code}`);
         setData(response.data);
-      } catch (err) {
+      } catch {
         setError('Failed to load analytics data.');
       } finally {
         setLoading(false);
@@ -49,25 +87,32 @@ export default function Analytics() {
   }
 
   const stats = Array.isArray(data.stats) ? data.stats : [];
-  
-  // Create a map of existing data for quick lookup
+
   const statsMap = {};
-  stats.forEach(s => {
-    const dateStr = new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    statsMap[dateStr] = Number(s.count);
+  stats.forEach((stat) => {
+    const dateKey = toDateKey(stat.date);
+    const clicks = Number(stat.clicks ?? stat.count ?? 0);
+
+    if (dateKey) {
+      statsMap[dateKey] = (statsMap[dateKey] || 0) + clicks;
+    }
   });
 
-  // Build chart data for the last 7 days
   const chartData = [];
+  const today = new Date();
+
   for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const dateKey = toDateKey(date);
+
     chartData.push({
-      date: dateStr,
-      clicks: statsMap[dateStr] || 0
+      date: formatDateLabel(dateKey),
+      clicks: statsMap[dateKey] || 0,
     });
   }
+
+  const maxDailyClicks = Math.max(0, ...chartData.map((item) => item.clicks));
+  const yAxisMax = Math.max(1, maxDailyClicks);
 
   return (
     <div>
@@ -129,22 +174,20 @@ export default function Analytics() {
         )}
         <div className="chart-container">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorClicks" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#818cf8" stopOpacity={0.8}/>
-                  <stop offset="95%" stopColor="#818cf8" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
+            <BarChart data={chartData} margin={{ top: 10, right: 18, left: 0, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
               <XAxis dataKey="date" stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
-              <YAxis stroke="var(--text-muted)" tick={{ fill: 'var(--text-muted)' }} tickLine={false} axisLine={false} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: 'var(--card-bg)', border: '1px solid var(--card-border)', borderRadius: '0.5rem', color: '#fff' }}
-                itemStyle={{ color: '#818cf8' }}
+              <YAxis
+                allowDecimals={false}
+                domain={[0, yAxisMax]}
+                stroke="var(--text-muted)"
+                tick={{ fill: 'var(--text-muted)' }}
+                tickLine={false}
+                axisLine={false}
               />
-              <Area type="monotone" dataKey="clicks" stroke="#818cf8" strokeWidth={3} fillOpacity={1} fill="url(#colorClicks)" />
-            </AreaChart>
+              <Tooltip cursor={{ fill: 'rgba(129, 140, 248, 0.08)' }} content={<DailyClicksTooltip />} />
+              <Bar dataKey="clicks" fill="#818cf8" radius={[8, 8, 0, 0]} maxBarSize={72} />
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>

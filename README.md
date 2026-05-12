@@ -4,20 +4,22 @@ TrimLink 是一个面向实际部署场景的短链接系统，采用 `React + V
 
 ## Demo 演示
 
+以下截图均为应用页面本体截图，不包含浏览器窗口外框，便于在 GitHub README 中保持更干净的展示效果。
+
 ### 1. 首页与生成
 输入长链接即可快速生成唯一的短码，界面简洁美观，支持一键复制。
 
-![首页](docs/images/home.png)
+<img src="docs/images/home.png" alt="TrimLink 首页与生成入口" width="100%">
 
 ### 2. 生成结果
 生成后可直接查看短链接，并提供进入分析页面的入口。
 
-![生成结果](docs/images/result.png)
+<img src="docs/images/result.png" alt="TrimLink 短链接生成结果" width="100%">
 
 ### 3. 数据分析
-实时统计短链接的访问数据，包括总点击量、服务状态以及每日访问趋势图。
+实时统计短链接的访问数据，包括总点击量、服务状态以及每日访问趋势图，图表使用整数刻度展示每日点击次数。
 
-![数据分析](docs/images/analytics.png)
+<img src="docs/images/analytics.png" alt="TrimLink 数据分析页" width="100%">
 
 ## 项目亮点
 
