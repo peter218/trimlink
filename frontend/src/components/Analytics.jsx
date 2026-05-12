@@ -49,18 +49,23 @@ export default function Analytics() {
   }
 
   const stats = Array.isArray(data.stats) ? data.stats : [];
+  
+  // Create a map of existing data for quick lookup
+  const statsMap = {};
+  stats.forEach(s => {
+    const dateStr = new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    statsMap[dateStr] = Number(s.count);
+  });
 
-  // Build chart data from daily logs
-  const chartData = stats.map(s => ({
-    date: new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-    clicks: Number(s.count)
-  }));
-
-  // If no daily log yet but total clicks > 0, show today's real total
-  if (chartData.length === 0) {
+  // Build chart data for the last 7 days
+  const chartData = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     chartData.push({
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      clicks: data.url.clicks || 0
+      date: dateStr,
+      clicks: statsMap[dateStr] || 0
     });
   }
 
